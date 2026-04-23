@@ -143,7 +143,7 @@ export default function App() {
             <input
               value={newTask.timeInput}
               onChange={e => setNewTask(p => ({ ...p, timeInput: formatTimeInput(e.target.value) }))}
-              placeholder="14:30"
+              placeholder="00:00"
               inputMode="numeric"
               style={inp()}
             />
