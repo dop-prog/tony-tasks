@@ -26,10 +26,17 @@ function isDueToday(task) {
   return task.date <= getTodayStr();
 }
 
-function formatDate(date, time) {
-  if (!date && !time) return null;
-  return [date, time].filter(Boolean).join(" ");
-}
+const C = {
+  bg: "#0d0d0d",
+  surface: "#161616",
+  border: "#1e1e1e",
+  border2: "#333",
+  text: "#d4d0c8",
+  textDim: "#aaa",
+  textFaint: "#666",
+  accent: "#e8d5b0",
+  font: "'Courier New', monospace",
+};
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -101,16 +108,27 @@ export default function App() {
   const todayList = active.filter(isDueToday);
   const displayed = view === "today" ? todayList : view === "all" ? active : doneList;
 
-  const C = {
-    bg: "#0d0d0d",
-    surface: "#111",
-    border: "#1e1e1e",
-    border2: "#2a2a2a",
-    text: "#d4d0c8",
-    textDim: "#888",
-    textFaint: "#555",
-    accent: "#e8d5b0",
-    font: "'Courier New', monospace",
+  const inputStyle = {
+    background: "#1a1a1a",
+    border: "1px solid " + C.border2,
+    color: C.text,
+    fontFamily: C.font,
+    fontSize: 13,
+    padding: "8px 10px",
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    WebkitAppearance: "none",
+    borderRadius: 0,
+  };
+
+  const labelStyle = {
+    fontSize: 9,
+    color: C.textFaint,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 4,
+    display: "block",
   };
 
   return (
@@ -138,13 +156,11 @@ export default function App() {
         {displayed.map(task => (
           <div key={task.id}>
             <div style={{ borderBottom: "1px solid " + C.border, padding: "14px 0", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              {/* Checkbox */}
-              <button onClick={() => toggleDone(task.id)} style={{ width: 20, height: 20, border: "1px solid " + (task.done ? C.accent : "#444"), background: task.done ? C.accent : "none", cursor: "pointer", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 12 }}>
+              <button onClick={() => toggleDone(task.id)} style={{ width: 20, height: 20, border: "1px solid " + (task.done ? C.accent : "#444"), background: task.done ? C.accent : "none", cursor: "pointer", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 12, borderRadius: 0 }}>
                 {task.done ? "✓" : ""}
               </button>
-
-              <div style={{ flex: 1 }} onClick={() => setSnoozeId(snoozeId === task.id ? null : task.id)}>
-                <div style={{ fontSize: 13, color: task.done ? C.textFaint : C.text, textDecoration: task.done ? "line-through" : "none", cursor: "pointer" }}>{task.text}</div>
+              <div style={{ flex: 1 }} onClick={() => !task.done && setSnoozeId(snoozeId === task.id ? null : task.id)}>
+                <div style={{ fontSize: 13, color: task.done ? C.textFaint : C.text, textDecoration: task.done ? "line-through" : "none", cursor: task.done ? "default" : "pointer" }}>{task.text}</div>
                 <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 10, color: CATEGORIES[task.category]?.color || C.textDim }}>{CATEGORIES[task.category]?.label}</span>
                   {task.date && <span style={{ fontSize: 10, color: C.textDim }}>{task.date}{task.time ? " " + task.time : ""}</span>}
@@ -152,16 +168,13 @@ export default function App() {
                   {task.done && task.doneDate && <span style={{ fontSize: 10, color: C.textFaint }}>✓ {task.doneDate}</span>}
                 </div>
               </div>
-
-              <button onClick={() => deleteTask(task.id)} style={{ background: "none", border: "none", color: C.textFaint, cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}>×</button>
+              <button onClick={() => deleteTask(task.id)} style={{ background: "none", border: "none", color: C.textFaint, cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0, lineHeight: 1 }}>×</button>
             </div>
-
-            {/* Snooze panel */}
-            {snoozeId === task.id && !task.done && (
-              <div style={{ background: C.surface, padding: "10px 12px", marginBottom: 4, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, color: C.textDim, alignSelf: "center", marginRight: 4 }}>Отложить:</span>
+            {snoozeId === task.id && (
+              <div style={{ background: C.surface, padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 10, color: C.textDim, marginRight: 4 }}>Отложить:</span>
                 {[["1ч", 1], ["3ч", 3], ["8ч", 8], ["1д", 24], ["2д", 48]].map(([label, h]) => (
-                  <button key={label} onClick={() => snooze(task.id, h)} style={{ background: "none", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 10, padding: "4px 10px", cursor: "pointer" }}>{label}</button>
+                  <button key={label} onClick={() => snooze(task.id, h)} style={{ background: "none", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 10, padding: "4px 10px", cursor: "pointer", borderRadius: 0 }}>{label}</button>
                 ))}
               </div>
             )}
@@ -169,34 +182,49 @@ export default function App() {
         ))}
       </div>
 
-      {/* Add form */}
+      {/* Add form — fixed at bottom, above keyboard */}
       {showAdd && (
-        <div style={{ position: "fixed", bottom: 70, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: "1px solid " + C.border, padding: "16px 20px", boxSizing: "border-box" }}>
-          <input autoFocus value={newTask.text} onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))} onKeyDown={e => e.key === "Enter" && addTask()} placeholder="Текст задачи..." style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid " + C.border2, color: C.accent, fontFamily: C.font, fontSize: 13, padding: "8px 0", outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: "1px solid " + C.border, padding: "12px 16px 24px", boxSizing: "border-box", zIndex: 100 }}>
+          <input
+            autoFocus
+            value={newTask.text}
+            onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))}
+            onKeyDown={e => e.key === "Enter" && addTask()}
+            placeholder="Текст задачи..."
+            style={{ ...inputStyle, marginBottom: 10, fontSize: 14 }}
+          />
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
             {Object.entries(CATEGORIES).map(([key, val]) => (
-              <button key={key} onClick={() => setNewTask(p => ({ ...p, category: key }))} style={{ background: newTask.category === key ? "#1e1e1e" : "none", border: "1px solid " + (newTask.category === key ? val.color : C.border2), color: val.color, fontFamily: C.font, fontSize: 10, padding: "4px 10px", cursor: "pointer" }}>{val.label}</button>
+              <button key={key} onClick={() => setNewTask(p => ({ ...p, category: key }))} style={{ background: newTask.category === key ? "#222" : "none", border: "1px solid " + (newTask.category === key ? val.color : C.border2), color: val.color, fontFamily: C.font, fontSize: 10, padding: "4px 10px", cursor: "pointer", borderRadius: 0 }}>{val.label}</button>
             ))}
           </div>
-
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <input type="date" value={newTask.date} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} style={{ background: "transparent", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 11, padding: "4px 8px" }} />
-            <input type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} style={{ background: "transparent", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 11, padding: "4px 8px" }} />
-            <select value={newTask.repeat} onChange={e => setNewTask(p => ({ ...p, repeat: e.target.value }))} style={{ background: C.surface, border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 11, padding: "4px 8px" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <span style={labelStyle}>Дата</span>
+              <input type="date" value={newTask.date} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} style={inputStyle} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <span style={labelStyle}>Время</span>
+              <input type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <span style={labelStyle}>Повтор</span>
+            <select value={newTask.repeat} onChange={e => setNewTask(p => ({ ...p, repeat: e.target.value }))} style={{ ...inputStyle }}>
               {Object.entries(REPEAT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
-
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={addTask} style={{ background: C.accent, color: "#0d0d0d", border: "none", fontFamily: C.font, fontSize: 11, letterSpacing: 2, padding: "8px 20px", cursor: "pointer" }}>ДОБАВИТЬ</button>
-            <button onClick={() => setShowAdd(false)} style={{ background: "none", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 11, padding: "8px 16px", cursor: "pointer" }}>отмена</button>
+            <button onClick={addTask} style={{ background: C.accent, color: "#0d0d0d", border: "none", fontFamily: C.font, fontSize: 11, letterSpacing: 2, padding: "10px 20px", cursor: "pointer", flex: 1, borderRadius: 0 }}>ДОБАВИТЬ</button>
+            <button onClick={() => setShowAdd(false)} style={{ background: "none", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 11, padding: "10px 16px", cursor: "pointer", borderRadius: 0 }}>✕</button>
           </div>
         </div>
       )}
 
       {/* FAB */}
-      <button onClick={() => setShowAdd(p => !p)} style={{ position: "fixed", bottom: 24, right: 24, width: 52, height: 52, borderRadius: "50%", background: C.accent, border: "none", color: "#0d0d0d", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>{showAdd ? "×" : "+"}</button>
+      {!showAdd && (
+        <button onClick={() => setShowAdd(true)} style={{ position: "fixed", bottom: 24, right: 24, width: 52, height: 52, borderRadius: "50%", background: C.accent, border: "none", color: "#0d0d0d", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>+</button>
+      )}
     </div>
   );
 }
