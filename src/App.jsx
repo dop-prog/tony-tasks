@@ -175,7 +175,7 @@ export default function App() {
         <span style={{ color: "#e8d5b0", fontSize: 14, letterSpacing: 3 }}>TONY.TASKS</span>
         <span style={{ color: "#888", fontSize: 11 }}>{todayList.length} на сегодня</span>
       {notifStatus !== "granted" && (
-        <div onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); if (r === "granted") scheduleChecks(tasks); }} style={{ fontSize: 9, color: "#e8d5b0", border: "1px solid #333", padding: "4px 8px", cursor: "pointer", userSelect: "none", letterSpacing: 1 }}>🔔 ВКЛ</div>
+        <div onClick={async () => { Notification.requestPermission().then(r => { setNotifStatus(r); if (r === "granted") scheduleChecks(tasks); }); }} style={{ fontSize: 9, color: "#e8d5b0", border: "1px solid #333", padding: "4px 8px", cursor: "pointer", userSelect: "none", letterSpacing: 1 }}>🔔 ВКЛ</div>
       )}
       </div>
       <div style={{ display: "flex", padding: "20px 20px 0", borderBottom: "1px solid #1e1e1e" }}>
