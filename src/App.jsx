@@ -58,6 +58,7 @@ export default function App() {
   const [newTask, setNewTask] = useState({ text: "", category: "work", dateInput: "", timeInput: "", repeat: "none" });
   const [loaded, setLoaded] = useState(false);
   const [snoozeId, setSnoozeId] = useState(null);
+  const [notifStatus, setNotifStatus] = useState(typeof Notification !== "undefined" ? Notification.permission : "denied");
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -173,6 +174,9 @@ export default function App() {
       <div style={{ padding: "24px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <span style={{ color: "#e8d5b0", fontSize: 14, letterSpacing: 3 }}>TONY.TASKS</span>
         <span style={{ color: "#888", fontSize: 11 }}>{todayList.length} на сегодня</span>
+      {notifStatus !== "granted" && (
+        <div onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); if (r === "granted") scheduleChecks(tasks); }} style={{ fontSize: 9, color: "#e8d5b0", border: "1px solid #333", padding: "4px 8px", cursor: "pointer", userSelect: "none", letterSpacing: 1 }}>🔔 ВКЛ</div>
+      )}
       </div>
       <div style={{ display: "flex", padding: "20px 20px 0", borderBottom: "1px solid #1e1e1e" }}>
         {[["today", "Сегодня"], ["all", "Все"], ["done", "Готово"]].map(([key, label]) => (
