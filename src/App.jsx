@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { requestPermission, scheduleChecks } from "./notify.js";
+import { requestPermission, scheduleChecks, subscribePush, syncTasks } from "./notify.js";
 
 const STORAGE_KEY = "tony-tasks-v1";
 const CATEGORIES = {
@@ -65,12 +65,12 @@ export default function App() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setTasks(JSON.parse(saved));
     setLoaded(true);
-    requestPermission().then(ok => { if (ok) setNotifStatus("granted"); });
+    requestPermission().then(ok => { if (ok) { setNotifStatus("granted"); subscribePush(); } });
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
   }, []);
 
   useEffect(() => {
-    if (loaded) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); scheduleChecks(tasks); }
+    if (loaded) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); scheduleChecks(tasks); syncTasks(tasks); }
   }, [tasks, loaded]);
 
   function openAdd() {
@@ -179,7 +179,7 @@ export default function App() {
         <span style={{ color: "#e8d5b0", fontSize: 14, letterSpacing: 3 }}>TONY.TASKS</span>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {notifStatus !== "granted" && (
-            <div onClick={() => { Notification.requestPermission().then(r => { setNotifStatus(r); if (r === "granted") scheduleChecks(tasks); }); }} style={{ fontSize: 9, color: "#e8d5b0", border: "1px solid #333", padding: "4px 8px", cursor: "pointer", userSelect: "none", letterSpacing: 1 }}>🔔 ВКЛ</div>
+            <div onClick={() => { Notification.requestPermission().then(r => { setNotifStatus(r); if (r === "granted") { scheduleChecks(tasks); subscribePush(); } }); }} style={{ fontSize: 9, color: "#e8d5b0", border: "1px solid #333", padding: "4px 8px", cursor: "pointer", userSelect: "none", letterSpacing: 1 }}>🔔 ВКЛ</div>
           )}
           <span style={{ color: "#888", fontSize: 11 }}>{todayList.length} на сегодня</span>
         </div>
