@@ -26,22 +26,12 @@ function isDueToday(task) {
   return task.date <= getTodayStr();
 }
 
-const C = {
-  bg: "#0d0d0d",
-  surface: "#161616",
-  border: "#1e1e1e",
-  border2: "#333",
-  text: "#d4d0c8",
-  textDim: "#aaa",
-  textFaint: "#666",
-  accent: "#e8d5b0",
-  font: "'Courier New', monospace",
-};
+const F = "'Courier New', monospace";
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [view, setView] = useState("today");
-  const [showAdd, setShowAdd] = useState(false);
+  const [screen, setScreen] = useState("list");
   const [newTask, setNewTask] = useState({ text: "", category: "work", date: "", time: "", repeat: "none" });
   const [loaded, setLoaded] = useState(false);
   const [snoozeId, setSnoozeId] = useState(null);
@@ -58,7 +48,7 @@ export default function App() {
 
   function addTask() {
     if (!newTask.text.trim()) return;
-    const task = {
+    setTasks(prev => [{
       id: Date.now(),
       text: newTask.text.trim(),
       category: newTask.category,
@@ -67,10 +57,9 @@ export default function App() {
       repeat: newTask.repeat,
       done: false,
       created: getTodayStr(),
-    };
-    setTasks(prev => [task, ...prev]);
+    }, ...prev]);
     setNewTask({ text: "", category: "work", date: "", time: "", repeat: "none" });
-    setShowAdd(false);
+    setScreen("list");
   }
 
   function toggleDone(id) {
@@ -81,8 +70,7 @@ export default function App() {
       const next = new Date(t.date || getTodayStr());
       if (t.repeat === "daily") next.setDate(next.getDate() + 1);
       if (t.repeat === "weekly") next.setDate(next.getDate() + 7);
-      const nd = next.getFullYear() + "-" + String(next.getMonth()+1).padStart(2,"0") + "-" + String(next.getDate()).padStart(2,"0");
-      return { ...t, date: nd };
+      return { ...t, date: next.getFullYear() + "-" + String(next.getMonth()+1).padStart(2,"0") + "-" + String(next.getDate()).padStart(2,"0") };
     }));
   }
 
@@ -91,90 +79,108 @@ export default function App() {
       if (t.id !== id) return t;
       const next = new Date();
       next.setHours(next.getHours() + hours);
-      const nd = next.getFullYear() + "-" + String(next.getMonth()+1).padStart(2,"0") + "-" + String(next.getDate()).padStart(2,"0");
-      const nt = String(next.getHours()).padStart(2,"0") + ":" + String(next.getMinutes()).padStart(2,"0");
-      return { ...t, date: nd, time: nt, done: false };
+      return { ...t, date: next.getFullYear() + "-" + String(next.getMonth()+1).padStart(2,"0") + "-" + String(next.getDate()).padStart(2,"0"), time: String(next.getHours()).padStart(2,"0") + ":" + String(next.getMinutes()).padStart(2,"0"), done: false };
     }));
     setSnoozeId(null);
   }
 
-  function deleteTask(id) {
-    setTasks(prev => prev.filter(t => t.id !== id));
-    setSnoozeId(null);
-  }
+  function deleteTask(id) { setTasks(prev => prev.filter(t => t.id !== id)); setSnoozeId(null); }
 
   const active = tasks.filter(t => !t.done);
   const doneList = tasks.filter(t => t.done);
   const todayList = active.filter(isDueToday);
   const displayed = view === "today" ? todayList : view === "all" ? active : doneList;
 
-  const inputStyle = {
-    background: "#1a1a1a",
-    border: "1px solid " + C.border2,
-    color: C.text,
-    fontFamily: C.font,
-    fontSize: 13,
-    padding: "8px 10px",
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
-    WebkitAppearance: "none",
-    borderRadius: 0,
-  };
+  if (screen === "add") {
+    return (
+      <div style={{ background: "#0d0d0d", minHeight: "100vh", fontFamily: F, color: "#d4d0c8", maxWidth: 480, margin: "0 auto", padding: "0 20px", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 0 28px" }}>
+          <span style={{ color: "#e8d5b0", fontSize: 13, letterSpacing: 3 }}>НОВАЯ ЗАДАЧА</span>
+          <button onClick={() => setScreen("list")} style={{ background: "none", border: "none", color: "#555", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+        </div>
 
-  const labelStyle = {
-    fontSize: 9,
-    color: C.textFaint,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 4,
-    display: "block",
-  };
+        <input
+          autoFocus
+          value={newTask.text}
+          onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))}
+          placeholder="Текст задачи..."
+          style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a2a2a", color: "#e8d5b0", fontFamily: F, fontSize: 15, padding: "8px 0 14px", outline: "none", boxSizing: "border-box", marginBottom: 28 }}
+        />
+
+        <div style={{ fontSize: 9, color: "#444", letterSpacing: 2, marginBottom: 10 }}>КАТЕГОРИЯ</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+          {Object.entries(CATEGORIES).map(([key, val]) => (
+            <button key={key} onClick={() => setNewTask(p => ({ ...p, category: key }))} style={{ background: newTask.category === key ? "#1a1a1a" : "none", border: "1px solid " + (newTask.category === key ? val.color : "#2a2a2a"), color: val.color, fontFamily: F, fontSize: 10, padding: "6px 12px", cursor: "pointer" }}>{val.label}</button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 9, color: "#444", letterSpacing: 2, marginBottom: 8 }}>ДАТА</div>
+            <input type="date" value={newTask.date} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} style={{ width: "100%", background: "#111", border: "1px solid #2a2a2a", color: "#d4d0c8", fontFamily: F, fontSize: 12, padding: "8px", boxSizing: "border-box", outline: "none", colorScheme: "dark" }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 9, color: "#444", letterSpacing: 2, marginBottom: 8 }}>ВРЕМЯ</div>
+            <input type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} style={{ width: "100%", background: "#111", border: "1px solid #2a2a2a", color: "#d4d0c8", fontFamily: F, fontSize: 12, padding: "8px", boxSizing: "border-box", outline: "none", colorScheme: "dark" }} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 9, color: "#444", letterSpacing: 2, marginBottom: 8 }}>ПОВТОР</div>
+          <select value={newTask.repeat} onChange={e => setNewTask(p => ({ ...p, repeat: e.target.value }))} style={{ width: "100%", background: "#111", border: "1px solid #2a2a2a", color: "#d4d0c8", fontFamily: F, fontSize: 12, padding: "8px", boxSizing: "border-box", outline: "none" }}>
+            {Object.entries(REPEAT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={addTask} style={{ flex: 1, background: "#e8d5b0", color: "#0d0d0d", border: "none", fontFamily: F, fontSize: 11, letterSpacing: 2, padding: "14px", cursor: "pointer" }}>ДОБАВИТЬ</button>
+          <button onClick={() => setScreen("list")} style={{ background: "none", border: "1px solid #2a2a2a", color: "#666", fontFamily: F, fontSize: 11, padding: "14px 20px", cursor: "pointer" }}>отмена</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: C.font, maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
-      {/* Header */}
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", color: "#d4d0c8", fontFamily: F, maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
       <div style={{ padding: "24px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ color: C.accent, fontSize: 14, letterSpacing: 3 }}>TONY.TASKS</span>
-        <span style={{ color: C.textDim, fontSize: 11 }}>{todayList.length} на сегодня</span>
+        <span style={{ color: "#e8d5b0", fontSize: 14, letterSpacing: 3 }}>TONY.TASKS</span>
+        <span style={{ color: "#888", fontSize: 11 }}>{todayList.length} на сегодня</span>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", padding: "20px 20px 0", borderBottom: "1px solid " + C.border }}>
+      <div style={{ display: "flex", padding: "20px 20px 0", borderBottom: "1px solid #1e1e1e" }}>
         {[["today", "Сегодня"], ["all", "Все"], ["done", "Готово"]].map(([key, label]) => (
-          <button key={key} onClick={() => setView(key)} style={{ background: "none", border: "none", borderBottom: view === key ? "1px solid " + C.accent : "1px solid transparent", color: view === key ? C.accent : C.textDim, fontFamily: C.font, fontSize: 11, letterSpacing: 2, padding: "8px 16px 10px", cursor: "pointer" }}>{label}</button>
+          <button key={key} onClick={() => setView(key)} style={{ background: "none", border: "none", borderBottom: view === key ? "1px solid #e8d5b0" : "1px solid transparent", color: view === key ? "#e8d5b0" : "#666", fontFamily: F, fontSize: 11, letterSpacing: 2, padding: "8px 16px 10px", cursor: "pointer" }}>{label}</button>
         ))}
       </div>
 
-      {/* List */}
       <div style={{ padding: "8px 20px" }}>
         {displayed.length === 0 && (
-          <div style={{ color: C.textFaint, fontSize: 12, marginTop: 40, textAlign: "center" }}>
+          <div style={{ color: "#333", fontSize: 12, marginTop: 40, textAlign: "center" }}>
             {view === "done" ? "Нет выполненных" : "Нет задач"}
           </div>
         )}
         {displayed.map(task => (
           <div key={task.id}>
-            <div style={{ borderBottom: "1px solid " + C.border, padding: "14px 0", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <button onClick={() => toggleDone(task.id)} style={{ width: 20, height: 20, border: "1px solid " + (task.done ? C.accent : "#444"), background: task.done ? C.accent : "none", cursor: "pointer", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 12, borderRadius: 0 }}>
+            <div style={{ borderBottom: "1px solid #1a1a1a", padding: "14px 0", display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <button onClick={() => toggleDone(task.id)} style={{ width: 18, height: 18, border: "1px solid " + (task.done ? "#e8d5b0" : "#333"), background: task.done ? "#e8d5b0" : "none", cursor: "pointer", flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 11 }}>
                 {task.done ? "✓" : ""}
               </button>
               <div style={{ flex: 1 }} onClick={() => !task.done && setSnoozeId(snoozeId === task.id ? null : task.id)}>
-                <div style={{ fontSize: 13, color: task.done ? C.textFaint : C.text, textDecoration: task.done ? "line-through" : "none", cursor: task.done ? "default" : "pointer" }}>{task.text}</div>
+                <div style={{ fontSize: 13, color: task.done ? "#444" : "#d4d0c8", textDecoration: task.done ? "line-through" : "none", cursor: task.done ? "default" : "pointer" }}>{task.text}</div>
                 <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 10, color: CATEGORIES[task.category]?.color || C.textDim }}>{CATEGORIES[task.category]?.label}</span>
-                  {task.date && <span style={{ fontSize: 10, color: C.textDim }}>{task.date}{task.time ? " " + task.time : ""}</span>}
-                  {task.repeat !== "none" && <span style={{ fontSize: 10, color: C.textFaint }}>↻ {REPEAT_OPTIONS[task.repeat]}</span>}
-                  {task.done && task.doneDate && <span style={{ fontSize: 10, color: C.textFaint }}>✓ {task.doneDate}</span>}
+                  <span style={{ fontSize: 10, color: CATEGORIES[task.category]?.color || "#888" }}>{CATEGORIES[task.category]?.label}</span>
+                  {task.date && <span style={{ fontSize: 10, color: "#888" }}>{task.date}{task.time ? " " + task.time : ""}</span>}
+                  {task.repeat !== "none" && <span style={{ fontSize: 10, color: "#555" }}>↻ {REPEAT_OPTIONS[task.repeat]}</span>}
+                  {task.done && task.doneDate && <span style={{ fontSize: 10, color: "#444" }}>✓ {task.doneDate}</span>}
                 </div>
               </div>
-              <button onClick={() => deleteTask(task.id)} style={{ background: "none", border: "none", color: C.textFaint, cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0, lineHeight: 1 }}>×</button>
+              <button onClick={() => deleteTask(task.id)} style={{ background: "none", border: "none", color: "#333", cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0, lineHeight: 1 }}>×</button>
             </div>
             {snoozeId === task.id && (
-              <div style={{ background: C.surface, padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: 10, color: C.textDim, marginRight: 4 }}>Отложить:</span>
+              <div style={{ background: "#111", padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 10, color: "#666", marginRight: 4 }}>Отложить:</span>
                 {[["1ч", 1], ["3ч", 3], ["8ч", 8], ["1д", 24], ["2д", 48]].map(([label, h]) => (
-                  <button key={label} onClick={() => snooze(task.id, h)} style={{ background: "none", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 10, padding: "4px 10px", cursor: "pointer", borderRadius: 0 }}>{label}</button>
+                  <button key={label} onClick={() => snooze(task.id, h)} style={{ background: "none", border: "1px solid #2a2a2a", color: "#888", fontFamily: F, fontSize: 10, padding: "4px 10px", cursor: "pointer" }}>{label}</button>
                 ))}
               </div>
             )}
@@ -182,49 +188,7 @@ export default function App() {
         ))}
       </div>
 
-      {/* Add form — fixed at bottom, above keyboard */}
-      {showAdd && (
-        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: "1px solid " + C.border, padding: "12px 16px 24px", boxSizing: "border-box", zIndex: 100 }}>
-          <input
-            autoFocus
-            value={newTask.text}
-            onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))}
-            onKeyDown={e => e.key === "Enter" && addTask()}
-            placeholder="Текст задачи..."
-            style={{ ...inputStyle, marginBottom: 10, fontSize: 14 }}
-          />
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-            {Object.entries(CATEGORIES).map(([key, val]) => (
-              <button key={key} onClick={() => setNewTask(p => ({ ...p, category: key }))} style={{ background: newTask.category === key ? "#222" : "none", border: "1px solid " + (newTask.category === key ? val.color : C.border2), color: val.color, fontFamily: C.font, fontSize: 10, padding: "4px 10px", cursor: "pointer", borderRadius: 0 }}>{val.label}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <div style={{ flex: 1 }}>
-              <span style={labelStyle}>Дата</span>
-              <input type="date" value={newTask.date} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} style={inputStyle} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <span style={labelStyle}>Время</span>
-              <input type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} style={inputStyle} />
-            </div>
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <span style={labelStyle}>Повтор</span>
-            <select value={newTask.repeat} onChange={e => setNewTask(p => ({ ...p, repeat: e.target.value }))} style={{ ...inputStyle }}>
-              {Object.entries(REPEAT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={addTask} style={{ background: C.accent, color: "#0d0d0d", border: "none", fontFamily: C.font, fontSize: 11, letterSpacing: 2, padding: "10px 20px", cursor: "pointer", flex: 1, borderRadius: 0 }}>ДОБАВИТЬ</button>
-            <button onClick={() => setShowAdd(false)} style={{ background: "none", border: "1px solid " + C.border2, color: C.textDim, fontFamily: C.font, fontSize: 11, padding: "10px 16px", cursor: "pointer", borderRadius: 0 }}>✕</button>
-          </div>
-        </div>
-      )}
-
-      {/* FAB */}
-      {!showAdd && (
-        <button onClick={() => setShowAdd(true)} style={{ position: "fixed", bottom: 24, right: 24, width: 52, height: 52, borderRadius: "50%", background: C.accent, border: "none", color: "#0d0d0d", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>+</button>
-      )}
+      <button onClick={() => setScreen("add")} style={{ position: "fixed", bottom: 24, right: 24, width: 52, height: 52, borderRadius: "50%", background: "#e8d5b0", border: "none", color: "#0d0d0d", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>+</button>
     </div>
   );
 }
