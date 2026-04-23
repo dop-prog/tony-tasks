@@ -16,15 +16,29 @@ function getTodayStr() {
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
 
+function formatDateInput(val) {
+  // автоформат дд.мм.гггг
+  const digits = val.replace(/\D/g, "").slice(0, 8);
+  let result = digits;
+  if (digits.length > 2) result = digits.slice(0,2) + "." + digits.slice(2);
+  if (digits.length > 4) result = digits.slice(0,2) + "." + digits.slice(2,4) + "." + digits.slice(4);
+  return result;
+}
+
+function formatTimeInput(val) {
+  // автоформат чч:мм
+  const digits = val.replace(/\D/g, "").slice(0, 4);
+  if (digits.length > 2) return digits.slice(0,2) + ":" + digits.slice(2);
+  return digits;
+}
+
 function parseDateInput(str) {
-  // принимает дд.мм.гггг → возвращает гггг-мм-дд
   const parts = str.split(".");
-  if (parts.length === 3) return parts[2] + "-" + parts[1] + "-" + parts[0];
-  return str;
+  if (parts.length === 3 && parts[2].length === 4) return parts[2] + "-" + parts[1] + "-" + parts[0];
+  return getTodayStr();
 }
 
 function formatDateDisplay(isoStr) {
-  // гггг-мм-дд → дд.мм.гггг
   if (!isoStr) return "";
   const parts = isoStr.split("-");
   if (parts.length === 3) return parts[2] + "." + parts[1] + "." + parts[0];
@@ -40,7 +54,7 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [view, setView] = useState("today");
   const [screen, setScreen] = useState("list");
-  const [newTask, setNewTask] = useState({ text: "", category: "work", dateInput: "", time: "", repeat: "none" });
+  const [newTask, setNewTask] = useState({ text: "", category: "work", dateInput: "", timeInput: "", repeat: "none" });
   const [loaded, setLoaded] = useState(false);
   const [snoozeId, setSnoozeId] = useState(null);
 
@@ -56,9 +70,9 @@ export default function App() {
 
   function addTask() {
     if (!newTask.text.trim()) return;
-    const isoDate = newTask.dateInput ? parseDateInput(newTask.dateInput) : getTodayStr();
-    setTasks(prev => [{ id: Date.now(), text: newTask.text.trim(), category: newTask.category, date: isoDate, time: newTask.time || "", repeat: newTask.repeat, done: false, created: getTodayStr() }, ...prev]);
-    setNewTask({ text: "", category: "work", dateInput: "", time: "", repeat: "none" });
+    const isoDate = newTask.dateInput.length >= 8 ? parseDateInput(newTask.dateInput) : getTodayStr();
+    setTasks(prev => [{ id: Date.now(), text: newTask.text.trim(), category: newTask.category, date: isoDate, time: newTask.timeInput || "", repeat: newTask.repeat, done: false, created: getTodayStr() }, ...prev]);
+    setNewTask({ text: "", category: "work", dateInput: "", timeInput: "", repeat: "none" });
     setScreen("list");
   }
 
@@ -99,7 +113,7 @@ export default function App() {
       <div style={{ background: "#0d0d0d", minHeight: "100vh", fontFamily: F, color: "#d4d0c8", maxWidth: 480, margin: "0 auto", padding: "0 20px 60px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 0 28px" }}>
           <span style={{ color: "#e8d5b0", fontSize: 12, letterSpacing: 3 }}>НОВАЯ ЗАДАЧА</span>
-          <button onClick={() => setScreen("list")} style={{ background: "none", border: "none", color: "#555", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          <div onClick={() => setScreen("list")} style={{ color: "#555", fontSize: 24, cursor: "pointer", lineHeight: 1, userSelect: "none" }}>×</div>
         </div>
 
         <input autoFocus value={newTask.text} onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))} placeholder="Текст задачи..." style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a2a2a", color: "#e8d5b0", fontFamily: F, fontSize: 15, padding: "8px 0", outline: "none", boxSizing: "border-box", marginBottom: 28 }} />
@@ -108,19 +122,31 @@ export default function App() {
           <span style={lbl}>КАТЕГОРИЯ</span>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {Object.entries(CATEGORIES).map(([k, v]) => (
-              <button key={k} onClick={() => setNewTask(p => ({ ...p, category: k }))} style={{ background: newTask.category === k ? "#1a1a1a" : "none", border: "1px solid " + (newTask.category === k ? v.color : "#2a2a2a"), color: v.color, fontFamily: F, fontSize: 10, padding: "6px 12px", cursor: "pointer" }}>{v.label}</button>
+              <div key={k} onClick={() => setNewTask(p => ({ ...p, category: k }))} style={{ background: newTask.category === k ? "#1a1a1a" : "none", border: "1px solid " + (newTask.category === k ? v.color : "#2a2a2a"), color: v.color, fontFamily: F, fontSize: 10, padding: "6px 12px", cursor: "pointer", userSelect: "none" }}>{v.label}</div>
             ))}
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1 }}>
-            <span style={lbl}>ДАТА (дд.мм.гггг)</span>
-            <input value={newTask.dateInput} onChange={e => setNewTask(p => ({ ...p, dateInput: e.target.value }))} placeholder="24.04.2026" style={inp()} />
+            <span style={lbl}>ДАТА</span>
+            <input
+              value={newTask.dateInput}
+              onChange={e => setNewTask(p => ({ ...p, dateInput: formatDateInput(e.target.value) }))}
+              placeholder="дд.мм.гггг"
+              inputMode="numeric"
+              style={inp()}
+            />
           </div>
           <div style={{ flex: 1 }}>
-            <span style={lbl}>ВРЕМЯ (чч:мм)</span>
-            <input value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} placeholder="14:30" style={inp()} />
+            <span style={lbl}>ВРЕМЯ</span>
+            <input
+              value={newTask.timeInput}
+              onChange={e => setNewTask(p => ({ ...p, timeInput: formatTimeInput(e.target.value) }))}
+              placeholder="14:30"
+              inputMode="numeric"
+              style={inp()}
+            />
           </div>
         </div>
 
@@ -132,8 +158,8 @@ export default function App() {
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={addTask} style={{ flex: 1, background: "#e8d5b0", color: "#0d0d0d", border: "none", fontFamily: F, fontSize: 11, letterSpacing: 2, padding: "14px", cursor: "pointer" }}>ДОБАВИТЬ</button>
-          <button onClick={() => setScreen("list")} style={{ background: "none", border: "1px solid #2a2a2a", color: "#666", fontFamily: F, fontSize: 11, padding: "14px 20px", cursor: "pointer" }}>отмена</button>
+          <div onClick={addTask} style={{ flex: 1, background: "#e8d5b0", color: "#0d0d0d", fontFamily: F, fontSize: 11, letterSpacing: 2, padding: "14px", cursor: "pointer", textAlign: "center", userSelect: "none" }}>ДОБАВИТЬ</div>
+          <div onClick={() => setScreen("list")} style={{ background: "none", border: "1px solid #2a2a2a", color: "#666", fontFamily: F, fontSize: 11, padding: "14px 20px", cursor: "pointer", userSelect: "none" }}>отмена</div>
         </div>
       </div>
     );
@@ -147,7 +173,7 @@ export default function App() {
       </div>
       <div style={{ display: "flex", padding: "20px 20px 0", borderBottom: "1px solid #1e1e1e" }}>
         {[["today", "Сегодня"], ["all", "Все"], ["done", "Готово"]].map(([key, label]) => (
-          <button key={key} onClick={() => setView(key)} style={{ background: "none", border: "none", borderBottom: view === key ? "1px solid #e8d5b0" : "1px solid transparent", color: view === key ? "#e8d5b0" : "#666", fontFamily: F, fontSize: 11, letterSpacing: 2, padding: "8px 16px 10px", cursor: "pointer" }}>{label}</button>
+          <div key={key} onClick={() => setView(key)} style={{ borderBottom: view === key ? "1px solid #e8d5b0" : "1px solid transparent", color: view === key ? "#e8d5b0" : "#666", fontFamily: F, fontSize: 11, letterSpacing: 2, padding: "8px 16px 10px", cursor: "pointer", userSelect: "none" }}>{label}</div>
         ))}
       </div>
       <div style={{ padding: "8px 20px" }}>
@@ -155,10 +181,7 @@ export default function App() {
         {displayed.map(task => (
           <div key={task.id}>
             <div style={{ borderBottom: "1px solid #1a1a1a", padding: "14px 0", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <div
-                onClick={() => toggleDone(task.id)}
-                style={{ width: 20, height: 20, border: "1px solid " + (task.done ? "#e8d5b0" : "#444"), background: task.done ? "#e8d5b0" : "transparent", cursor: "pointer", flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 12, userSelect: "none" }}
-              >
+              <div onClick={() => toggleDone(task.id)} style={{ width: 20, height: 20, border: "1px solid " + (task.done ? "#e8d5b0" : "#444"), background: task.done ? "#e8d5b0" : "transparent", cursor: "pointer", flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 12, userSelect: "none" }}>
                 {task.done ? "✓" : ""}
               </div>
               <div style={{ flex: 1 }} onClick={() => !task.done && setSnoozeId(snoozeId === task.id ? null : task.id)}>
@@ -176,14 +199,14 @@ export default function App() {
               <div style={{ background: "#111", padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: 10, color: "#666", marginRight: 4 }}>Отложить:</span>
                 {[["1ч", 1], ["3ч", 3], ["8ч", 8], ["1д", 24], ["2д", 48]].map(([label, h]) => (
-                  <button key={label} onClick={() => snooze(task.id, h)} style={{ background: "none", border: "1px solid #2a2a2a", color: "#888", fontFamily: F, fontSize: 10, padding: "4px 10px", cursor: "pointer" }}>{label}</button>
+                  <div key={label} onClick={() => snooze(task.id, h)} style={{ border: "1px solid #2a2a2a", color: "#888", fontFamily: F, fontSize: 10, padding: "4px 10px", cursor: "pointer", userSelect: "none" }}>{label}</div>
                 ))}
               </div>
             )}
           </div>
         ))}
       </div>
-      <button onClick={() => setScreen("add")} style={{ position: "fixed", bottom: 24, right: 24, width: 52, height: 52, borderRadius: "50%", background: "#e8d5b0", border: "none", color: "#0d0d0d", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>+</button>
+      <div onClick={() => setScreen("add")} style={{ position: "fixed", bottom: 24, right: 24, width: 52, height: 52, borderRadius: "50%", background: "#e8d5b0", color: "#0d0d0d", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", userSelect: "none" }}>+</div>
     </div>
   );
 }
