@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { requestPermission, scheduleChecks } from "./notify.js";
 
 const STORAGE_KEY = "tony-tasks-v1";
 const CATEGORIES = {
@@ -62,10 +63,12 @@ export default function App() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setTasks(JSON.parse(saved));
     setLoaded(true);
+    requestPermission();
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
   }, []);
 
   useEffect(() => {
-    if (loaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    if (loaded) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); scheduleChecks(tasks); }
   }, [tasks, loaded]);
 
   function addTask() {
