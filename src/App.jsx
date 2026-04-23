@@ -16,6 +16,21 @@ function getTodayStr() {
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
 
+function parseDateInput(str) {
+  // принимает дд.мм.гггг → возвращает гггг-мм-дд
+  const parts = str.split(".");
+  if (parts.length === 3) return parts[2] + "-" + parts[1] + "-" + parts[0];
+  return str;
+}
+
+function formatDateDisplay(isoStr) {
+  // гггг-мм-дд → дд.мм.гггг
+  if (!isoStr) return "";
+  const parts = isoStr.split("-");
+  if (parts.length === 3) return parts[2] + "." + parts[1] + "." + parts[0];
+  return isoStr;
+}
+
 function isDueToday(task) {
   if (!task.date) return true;
   return task.date <= getTodayStr();
@@ -25,7 +40,7 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [view, setView] = useState("today");
   const [screen, setScreen] = useState("list");
-  const [newTask, setNewTask] = useState({ text: "", category: "work", date: "", time: "", repeat: "none" });
+  const [newTask, setNewTask] = useState({ text: "", category: "work", dateInput: "", time: "", repeat: "none" });
   const [loaded, setLoaded] = useState(false);
   const [snoozeId, setSnoozeId] = useState(null);
 
@@ -41,8 +56,9 @@ export default function App() {
 
   function addTask() {
     if (!newTask.text.trim()) return;
-    setTasks(prev => [{ id: Date.now(), text: newTask.text.trim(), category: newTask.category, date: newTask.date || getTodayStr(), time: newTask.time || "", repeat: newTask.repeat, done: false, created: getTodayStr() }, ...prev]);
-    setNewTask({ text: "", category: "work", date: "", time: "", repeat: "none" });
+    const isoDate = newTask.dateInput ? parseDateInput(newTask.dateInput) : getTodayStr();
+    setTasks(prev => [{ id: Date.now(), text: newTask.text.trim(), category: newTask.category, date: isoDate, time: newTask.time || "", repeat: newTask.repeat, done: false, created: getTodayStr() }, ...prev]);
+    setNewTask({ text: "", category: "work", dateInput: "", time: "", repeat: "none" });
     setScreen("list");
   }
 
@@ -75,7 +91,7 @@ export default function App() {
   const todayList = active.filter(isDueToday);
   const displayed = view === "today" ? todayList : view === "all" ? active : doneList;
 
-  const inp = (extra) => ({ background: "#111", border: "1px solid #2a2a2a", color: "#d4d0c8", fontFamily: F, fontSize: 13, padding: "10px 12px", outline: "none", width: "100%", boxSizing: "border-box", ...extra });
+  const inp = () => ({ background: "#111", border: "1px solid #2a2a2a", color: "#d4d0c8", fontFamily: F, fontSize: 13, padding: "10px 12px", outline: "none", width: "100%", boxSizing: "border-box" });
   const lbl = { fontSize: 9, color: "#444", letterSpacing: 2, marginBottom: 6, display: "block" };
 
   if (screen === "add") {
@@ -86,7 +102,7 @@ export default function App() {
           <button onClick={() => setScreen("list")} style={{ background: "none", border: "none", color: "#555", fontSize: 24, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
         </div>
 
-        <input autoFocus value={newTask.text} onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))} placeholder="Текст задачи..." style={{ ...inp(), borderColor: "#333", marginBottom: 28, fontSize: 15, background: "transparent", border: "none", borderBottom: "1px solid #2a2a2a", color: "#e8d5b0", padding: "8px 0" }} />
+        <input autoFocus value={newTask.text} onChange={e => setNewTask(p => ({ ...p, text: e.target.value }))} placeholder="Текст задачи..." style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a2a2a", color: "#e8d5b0", fontFamily: F, fontSize: 15, padding: "8px 0", outline: "none", boxSizing: "border-box", marginBottom: 28 }} />
 
         <div style={{ marginBottom: 24 }}>
           <span style={lbl}>КАТЕГОРИЯ</span>
@@ -99,8 +115,8 @@ export default function App() {
 
         <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1 }}>
-            <span style={lbl}>ДАТА (гг-мм-дд)</span>
-            <input value={newTask.date} onChange={e => setNewTask(p => ({ ...p, date: e.target.value }))} placeholder="2026-04-24" style={inp()} />
+            <span style={lbl}>ДАТА (дд.мм.гггг)</span>
+            <input value={newTask.dateInput} onChange={e => setNewTask(p => ({ ...p, dateInput: e.target.value }))} placeholder="24.04.2026" style={inp()} />
           </div>
           <div style={{ flex: 1 }}>
             <span style={lbl}>ВРЕМЯ (чч:мм)</span>
@@ -139,19 +155,22 @@ export default function App() {
         {displayed.map(task => (
           <div key={task.id}>
             <div style={{ borderBottom: "1px solid #1a1a1a", padding: "14px 0", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <button onClick={() => toggleDone(task.id)} style={{ width: 18, height: 18, border: "1px solid " + (task.done ? "#e8d5b0" : "#333"), background: task.done ? "#e8d5b0" : "none", cursor: "pointer", flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 11 }}>
+              <div
+                onClick={() => toggleDone(task.id)}
+                style={{ width: 20, height: 20, border: "1px solid " + (task.done ? "#e8d5b0" : "#444"), background: task.done ? "#e8d5b0" : "transparent", cursor: "pointer", flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", color: "#0d0d0d", fontSize: 12, userSelect: "none" }}
+              >
                 {task.done ? "✓" : ""}
-              </button>
+              </div>
               <div style={{ flex: 1 }} onClick={() => !task.done && setSnoozeId(snoozeId === task.id ? null : task.id)}>
                 <div style={{ fontSize: 13, color: task.done ? "#444" : "#d4d0c8", textDecoration: task.done ? "line-through" : "none", cursor: task.done ? "default" : "pointer" }}>{task.text}</div>
                 <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 10, color: CATEGORIES[task.category]?.color || "#888" }}>{CATEGORIES[task.category]?.label}</span>
-                  {task.date && <span style={{ fontSize: 10, color: "#888" }}>{task.date}{task.time ? " " + task.time : ""}</span>}
+                  {task.date && <span style={{ fontSize: 10, color: "#888" }}>{formatDateDisplay(task.date)}{task.time ? " " + task.time : ""}</span>}
                   {task.repeat !== "none" && <span style={{ fontSize: 10, color: "#555" }}>↻ {REPEAT_OPTIONS[task.repeat]}</span>}
-                  {task.done && task.doneDate && <span style={{ fontSize: 10, color: "#444" }}>✓ {task.doneDate}</span>}
+                  {task.done && task.doneDate && <span style={{ fontSize: 10, color: "#444" }}>✓ {formatDateDisplay(task.doneDate)}</span>}
                 </div>
               </div>
-              <button onClick={() => deleteTask(task.id)} style={{ background: "none", border: "none", color: "#333", cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0, lineHeight: 1 }}>×</button>
+              <div onClick={() => deleteTask(task.id)} style={{ color: "#333", cursor: "pointer", fontSize: 20, padding: "0 4px", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>×</div>
             </div>
             {snoozeId === task.id && (
               <div style={{ background: "#111", padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
